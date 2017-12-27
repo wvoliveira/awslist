@@ -1,4 +1,5 @@
-[![build status](http://gitlab.devel/wellingtonoliveira/awslist/badges/master/build.svg)](http://gitlab.devel/wellingtonoliveira/awslist/commits/master)
+[![build status](https://travis-ci.org/wvoliveira/awslist.svg?branch=master))](https://travis-ci.org/wvoliveira/awslist)
+
 AWSLIST
 -------
 
