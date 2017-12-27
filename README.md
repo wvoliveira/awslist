@@ -1,4 +1,4 @@
-[![build status](https://travis-ci.org/wvoliveira/awslist.svg?branch=master))](https://travis-ci.org/wvoliveira/awslist)
+[![build status](https://travis-ci.org/wvoliveira/awslist.svg?branch=master)](https://travis-ci.org/wvoliveira/awslist)
 
 AWSLIST
 -------
