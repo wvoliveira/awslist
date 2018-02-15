@@ -14,15 +14,16 @@ TEMPLATES = {'default': ["""
 
 <div class="container">
 <h2>AWS VMs</h2>
-<input type="text" id="myInput" class="form-control" onkeyup="search()" placeholder="Procurar..">
-<table class="table" id="myTable">
+<input type="text" id="searchTerm" class="form-control" onkeyup="doSearch()" placeholder="Procurar..">
+<p>
 
+<table class="table" id="dataTable">
 <tr>
-<th>Name</th>
-<th>Security Group</th>
-<th>Monitoring</th>
-<th>IP</th>
-<th>State</th>
+<th onclick="sortTable(0)" style="cursor:pointer">Name</th>
+<th onclick="sortTable(1)" style="cursor:pointer">Security Group</th>
+<th onclick="sortTable(2)" style="cursor:pointer">Monitoring</th>
+<th onclick="sortTable(3)" style="cursor:pointer">IP</th>
+<th onclick="sortTable(4)" style="cursor:pointer">State</th>
 </tr>
 """,
 """
