@@ -12,7 +12,7 @@ TEMPLATES = {'default': ["""
 </head>
 <body>
 
-<div class="container">
+<div class="">
 <h2>AWS VMs</h2>
 <input type="text" id="searchTerm" class="form-control" onkeyup="doSearch()" placeholder="Procurar..">
 <p>
