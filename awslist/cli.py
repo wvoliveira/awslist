@@ -8,38 +8,36 @@ import logging
 import sys
 import os
 import shutil
+import tempfile
 from colorama import Fore, Style
 from .commands import config_parser, aws, TEMPLATES
 
 
 def main():
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description="""List EC2 VMs HTML format.\nhttps://github.com/wvoliveira/awslist""")
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description="""List EC2 VMs HTML format.\nhttps://github.com/wvoliveira/awslist""")
     parser.add_argument('--region', default='sa-east-1', metavar='\b', help='region', required=False)
     parser.add_argument('--credentials', default='~/.aws/credentials', metavar='\b', help='credentials', required=False)
+    parser.add_argument('--force', default=False, action='store_true', help='Force update folder')
     parser.add_argument('directory')
     args = parser.parse_args()
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(message)s')
     logging.info('[*] Creating project structure...')
 
-    while True:
-        try:
-            if os.path.exists(args.directory):
-                args.directory = input('{0}[!]{1} This folder already exists.\n'
-                                       '{2}[?]{1} Please, choose another:\n> '.format(Fore.RED, Fore.RESET, Fore.YELLOW))
-            else:
-                break
-        except KeyboardInterrupt:
-            print('Bye')
-            exit(1)
+    if not args.force:
+        if os.path.exists(args.directory):
+            print('{0}[!]{1} This folder already exists! Exiting..')
+            sys.exit(1)
 
-    project_dir = '{}/{}'.format(os.path.abspath('.'), args.directory)
+    temp_dir = os.path.join(tempfile.mkdtemp(), args.directory)
+    project_dir = os.path.join(os.path.abspath('.'), args.directory)
     package_dir = sys.modules['awslist'].__path__[0]
 
-    logging.info('[+] Project directory: {0}{1}{2}'.format(Style.BRIGHT, project_dir, Style.NORMAL))
+    logging.info('[+] Temporary: {0}{1}{2}'.format(Style.BRIGHT, temp_dir, Style.NORMAL))
+    logging.info('[+] Project: {0}{1}{2}'.format(Style.BRIGHT, project_dir, Style.NORMAL))
+
     src_static_files = os.path.join(package_dir, 'data')
-    dst_static_files = os.path.join(project_dir, 'static')
+    dst_static_files = os.path.join(temp_dir, 'static')
     src_files = os.listdir(src_static_files)
 
     logging.info('[*] Copying files into the project directory..')
@@ -71,56 +69,64 @@ def main():
     head = TEMPLATES['default'][0]
     foot = TEMPLATES['default'][1]
 
-    monitoring = state = security_group = private_ip = name = None
-
-    index = os.path.join(project_dir, 'index.html')
+    index = os.path.join(temp_dir, 'index.html')
 
     logging.info('[*] Parsing AWS information and writing into index.html file..')
     file = open(index, 'a')
     file.write(head)
 
+    security_groups = private_ip = name = None
+
     for instance in instances_info:
         file.write('<tr>')
-        info = instance['Instances'][0]
+        vm = instance['Instances'][0]
 
-        for tag in sorted(info):
-            if tag == 'Monitoring':
-                monitoring = info[tag]['State']
-                continue
+        try:
+            name = ''.join(x['Value'] for x in vm['Tags'] if x['Key'] == 'Name')
+        except:
+            pass
 
-            if tag == 'State':
-                state = info[tag]['Name']
-                continue
+        monitoring = vm['Monitoring']['State']
+        state = vm['State']['Name']
 
-            if tag == 'SecurityGroups':
-                sg = info[tag]
-                if len(sg) != 0:
-                    if 'GroupName' in sg[0]:
-                        security_group = sg[0]['GroupName']
-                        continue
+        try:
+            security_groups = ', '.join(name['GroupName'] for name in vm['SecurityGroups'])
+        except:
+            pass
 
-            if tag == 'NetworkInterfaces':
-                if len(info[tag]) != 0:
-                    private_ip = info[tag][0]['PrivateIpAddress']
-                    continue
+        try:
+            private_ip = vm['NetworkInterfaces'][0]['PrivateIpAddress']
+        except:
+            pass
 
-            if tag == 'Tags':
-                for _tags in info[tag]:
-                    if _tags['Key'] == 'Name':
-                        name = _tags['Value']
-                        continue
-
-            if tag in ['BlockDeviceMappings', 'IamInstanceProfile']:
-                continue
+        zone = vm['Placement']['AvailabilityZone']
+        _type = vm['InstanceType']
+        _key = vm['KeyName']
+        instance_id = vm['InstanceId']
+        image_id = vm['ImageId']
+        private_dns = vm['PrivateDnsName']
 
         file.write('<td>{0}</td>'.format(name.lower()))
-        file.write('<td>{0}</td>'.format(security_group.lower()))
-        file.write('<td>{0}</td>'.format(monitoring))
         file.write('<td>{0}</td>'.format(private_ip))
+        file.write('<td>{0}</td>'.format(security_groups.lower()))
+        file.write('<td>{0}</td>'.format(monitoring))
         file.write('<td>{0}</td>'.format(state))
+        file.write('<td>{0}</td>'.format(zone))
+        file.write('<td>{0}</td>'.format(_type))
+        file.write('<td>{0}</td>'.format(_key))
+        file.write('<td>{0}</td>'.format(instance_id))
+        file.write('<td>{0}</td>'.format(image_id))
+        file.write('<td>{0}</td>'.format(private_dns))
         file.write('</tr>')
 
     file.write(foot)
+
+    if args.force:
+        if os.path.exists(args.directory):
+            shutil.rmtree(args.directory)
+
+    logging.info('[*] Moving from {0}{2}{1} to {3}.. '.format(Style.BRIGHT, Style.NORMAL, temp_dir, project_dir))
+    shutil.move(temp_dir, project_dir)
 
     print('[*] Done!')
     exit(0)
